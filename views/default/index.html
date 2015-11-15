@@ -1,0 +1,34 @@
+{{left_sidebar_enabled,right_sidebar_enabled=True,('message' in globals())}}
+{{extend 'layout.html'}}
+
+{{block header}}
+    <header class="container-fluid background">
+      <div class="jumbotron text-center">
+        {{if response.title:}}
+        <h1>{{=response.title}}
+          <small>{{=response.subtitle or ''}}</small></h1>
+        {{pass}}
+      </div>
+    </header>
+{{end}}
+
+<h3>Overview</h3>
+<ul style="text-align:left">
+	<li>Apply here for the courses that you would like to be a TA for this semester.</li>
+	<li>If you have been selected for one Course, Your name will be deleted from the list of applicants, you no longer can apply for other Courses</li>
+	<li>Preference will be given to those candidates whom the course instructor recommends.</li>
+	<li><b>All selected TA's must attend a mandatory orientation session date will be announced latter</b></li>
+	<li>If you have registered for a course in a specific slot, then you should not apply for TAship for any other course that has a tutorial session scheduled in the same slot. For example, if course "ABC" is scheduled from 10:00 - 11:25 am on Mondays and Thursdays and tutorial for the same course "ABC" is scheduled on Mondays at 2:00 pm, you should not apply for TAship for course "ABC" if you are registered for any other course that has lecture session from 2:00 - 3:25 pm on Mondays and Thursdays</li>
+</ul>
+
+{{block left_sidebar}}
+<br/>
+<ul class="butul">
+	<li class="butli"><a href="{{=URL('default','apply')}}" class="round red">Apply for TAship<span class="round">Apply for TAship position</span></a></li>
+	<br/>
+	<li class="butli"><a href="{{=URL('default','fill_details')}}" class="round yellow">Edit Personal Details<span class="round">Change the details you provided initially.</span></a></li>
+	<li class="butli"><a href="{{=URL('default','admin_page')}}" class="round yellow">Contact Admins<span class="round">Contact the admins of this website.</span></a></li>
+	<li class="butli"><a href="{{=URL('default','course_detail')}}" class="round yellow">Course Details<span class="round">View the courses offered this semester.</span></a></li>
+</ul>
+<!-- Left empty -->
+{{end}}

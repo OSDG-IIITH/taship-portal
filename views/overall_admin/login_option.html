@@ -1,0 +1,22 @@
+{{left_sidebar_enabled,right_sidebar_enabled=True,('message' in globals())}}
+{{extend 'layout.html'}}
+
+{{block header}}
+    <header class="container-fluid background">
+      <div class="jumbotron text-center">
+        {{if response.title:}}
+        <h1>{{=response.title}}
+          <small>{{=response.subtitle or ''}}</small></h1>
+        {{pass}}
+      </div>
+    </header>
+{{end}}
+
+<h3>User Options</h3>
+<br/>
+<ul class="butul">
+        <li class="butli"><a href="{{=URL('overall_admin','login_option?log_token=1')}}" class="round red">Admin<span class="round">Continue as Admin user.</span></a></li>
+        <li class="butli"><a href="{{=URL('overall_admin','login_option?log_token=2')}}" class="round yellow">Faculty<span class="round">Transform to Faculty user.</span></a></li>
+</ul>
+
+

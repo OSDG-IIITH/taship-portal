@@ -1,0 +1,29 @@
+{{extend 'layout.html'}}
+
+<br/>
+<div style="width:40%; float:left; text-align:left">
+<h3>Reset Application Period</h3>
+{{=appDeadlineForm}}
+
+<br/>
+{{if appDetail:}}
+<h4 style="text-align:left">Application Period :</h4>
+<ul style="text-align:left">
+    <li>Start : {{=appDetail['start']}}</li>
+    <li>End   : {{=appDetail['end']}}</li>
+<ul>
+{{pass}}
+</div>
+
+<div style="width:40%; float:right; text-align:left">
+<h3>Reset Nomiation Period</h3>
+{{=nomDeadlineForm}}
+<br/>
+{{if nomDetail:}}
+<h4 style="text-align:left">Nomination Period :</h4>
+<ul style="text-align:left">
+    <li>Start : {{=nomDetail['start']}}</li>
+    <li>End   : {{=nomDetail['end']}}</li>
+</ul>
+{{pass}}
+</div>

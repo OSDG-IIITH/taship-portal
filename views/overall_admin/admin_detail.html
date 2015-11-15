@@ -1,0 +1,20 @@
+{{extend 'layout.html'}}
+
+<br/>
+<h3>Add a new Admin</h3>
+{{=addAdminForm}}
+
+<br/>
+<table border='5px' class="table table-bordered table-hover">
+    <caption>All Admins</caption>
+    <tr>
+        <th style="text-align:center; width:10%">Name</th>
+        <th style="text-align:center; width:60%">Contact</th>
+    <tr>
+    {{for admin in adminDetail:}}
+    <tr>
+        <td style="text-align:center">{{=admin['ad_name']}}</td>
+        <td style="text-align:center">{{=admin['ad_emailid']}}</td>
+    </tr>
+    {{pass}}
+</table>

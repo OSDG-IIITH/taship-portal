@@ -1,0 +1,480 @@
+timestamp: 2015-06-19T02:54:51.083542
+CREATE TABLE auth_user(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    first_name CHAR(128),
+    last_name CHAR(128),
+    email CHAR(512),
+    password CHAR(512),
+    registration_key CHAR(512),
+    reset_password_key CHAR(512),
+    registration_id CHAR(512)
+);
+success!
+timestamp: 2015-06-19T02:54:51.097261
+CREATE TABLE auth_group(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    role CHAR(512),
+    description TEXT
+);
+success!
+timestamp: 2015-06-19T02:54:51.100486
+CREATE TABLE auth_membership(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER REFERENCES auth_user (id) ON DELETE CASCADE,
+    group_id INTEGER REFERENCES auth_group (id) ON DELETE CASCADE
+);
+success!
+timestamp: 2015-06-19T02:54:51.103996
+CREATE TABLE auth_permission(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    group_id INTEGER REFERENCES auth_group (id) ON DELETE CASCADE,
+    name CHAR(512),
+    table_name CHAR(512),
+    record_id INTEGER
+);
+success!
+timestamp: 2015-06-19T02:54:51.107694
+CREATE TABLE auth_event(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    time_stamp TIMESTAMP,
+    client_ip CHAR(512),
+    user_id INTEGER REFERENCES auth_user (id) ON DELETE CASCADE,
+    origin CHAR(512),
+    description TEXT
+);
+success!
+timestamp: 2015-06-19T02:54:51.111272
+CREATE TABLE auth_cas(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER REFERENCES auth_user (id) ON DELETE CASCADE,
+    created_on TIMESTAMP,
+    service CHAR(512),
+    ticket CHAR(512),
+    renew CHAR(1)
+);
+success!
+timestamp: 2015-06-19T02:54:51.115059
+CREATE TABLE Applicant(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ap_name CHAR(512),
+    ap_emailid CHAR(512),
+    ap_rollno INTEGER,
+    ap_cgpa DOUBLE,
+    ap_phoneno INTEGER,
+    ap_prevexp CHAR(512),
+    ap_program CHAR(512)
+);
+success!
+timestamp: 2015-06-19T02:54:51.118078
+CREATE TABLE Admin(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ad_name CHAR(512),
+    ad_emailid CHAR(512)
+);
+success!
+timestamp: 2015-06-19T02:54:51.120938
+CREATE TABLE Faculty(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fac_name CHAR(512),
+    fac_emailid CHAR(512)
+);
+success!
+timestamp: 2015-06-19T02:54:51.123756
+CREATE TABLE Semester(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sem_name CHAR(512)
+);
+success!
+timestamp: 2015-06-19T02:54:51.129029
+CREATE TABLE Course(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    c_code CHAR(512),
+    c_name CHAR(512),
+    c_credits INTEGER,
+    max_ta INTEGER,
+    no_of_qta INTEGER,
+    no_of_hta INTEGER,
+    no_of_fta INTEGER,
+    hrs_per_week INTEGER,
+    sem_id INTEGER REFERENCES Semester (id) ON DELETE CASCADE,
+    c_type CHAR(512),
+    no_of_faculty INTEGER
+);
+success!
+timestamp: 2015-06-19T02:54:51.132702
+CREATE TABLE Faculty_Course(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fac_id INTEGER REFERENCES Faculty (id) ON DELETE CASCADE,
+    c_id INTEGER REFERENCES Course (id) ON DELETE CASCADE
+);
+success!
+timestamp: 2015-06-19T02:54:51.135878
+CREATE TABLE Nomination(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    c_id INTEGER REFERENCES Course (id) ON DELETE CASCADE,
+    ap_id INTEGER REFERENCES Applicant (id) ON DELETE CASCADE
+);
+success!
+timestamp: 2015-06-19T02:54:51.139542
+CREATE TABLE Selected(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ap_id INTEGER REFERENCES Applicant (id) ON DELETE CASCADE,
+    nom_id INTEGER REFERENCES Nomination (id) ON DELETE CASCADE,
+    c_id INTEGER REFERENCES Course (id) ON DELETE CASCADE,
+    ta_type CHAR(512),
+    time_sel TIMESTAMP
+);
+success!
+timestamp: 2015-06-19T02:54:51.143541
+CREATE TABLE Application(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ap_id INTEGER REFERENCES Applicant (id) ON DELETE CASCADE,
+    c_id INTEGER REFERENCES Course (id) ON DELETE CASCADE,
+    grade CHAR(512),
+    applied_at TIMESTAMP,
+    pref INTEGER,
+    status CHAR(512)
+);
+success!
+timestamp: 2015-06-19T02:54:51.146692
+CREATE TABLE AppDeadline(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    start TIMESTAMP,
+    end TIMESTAMP
+);
+success!
+timestamp: 2015-06-19T02:54:51.149826
+CREATE TABLE NomDeadline(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    start TIMESTAMP,
+    end TIMESTAMP
+);
+success!
+timestamp: 2015-07-01T12:21:01.255498
+CREATE TABLE auth_user(
+    id INT AUTO_INCREMENT NOT NULL,
+    first_name VARCHAR(128),
+    last_name VARCHAR(128),
+    email VARCHAR(512),
+    password VARCHAR(512),
+    registration_key VARCHAR(512),
+    reset_password_key VARCHAR(512),
+    registration_id VARCHAR(512),
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+timestamp: 2015-07-01T12:23:36.244925
+CREATE TABLE auth_user(
+    id INT AUTO_INCREMENT NOT NULL,
+    first_name VARCHAR(128),
+    last_name VARCHAR(128),
+    email VARCHAR(512),
+    password VARCHAR(512),
+    registration_key VARCHAR(512),
+    reset_password_key VARCHAR(512),
+    registration_id VARCHAR(512),
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+timestamp: 2015-07-01T12:23:39.296258
+CREATE TABLE auth_user(
+    id INT AUTO_INCREMENT NOT NULL,
+    first_name VARCHAR(128),
+    last_name VARCHAR(128),
+    email VARCHAR(512),
+    password VARCHAR(512),
+    registration_key VARCHAR(512),
+    reset_password_key VARCHAR(512),
+    registration_id VARCHAR(512),
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+timestamp: 2015-07-01T12:26:02.749282
+CREATE TABLE auth_user(
+    id INT AUTO_INCREMENT NOT NULL,
+    first_name VARCHAR(128),
+    last_name VARCHAR(128),
+    email VARCHAR(512),
+    password VARCHAR(512),
+    registration_key VARCHAR(512),
+    reset_password_key VARCHAR(512),
+    registration_id VARCHAR(512),
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+success!
+timestamp: 2015-07-01T12:26:02.785968
+CREATE TABLE auth_group(
+    id INT AUTO_INCREMENT NOT NULL,
+    role VARCHAR(512),
+    description LONGTEXT,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+success!
+timestamp: 2015-07-01T12:26:02.806140
+CREATE TABLE auth_membership(
+    id INT AUTO_INCREMENT NOT NULL,
+    user_id INT, INDEX user_id__idx (user_id), FOREIGN KEY (user_id) REFERENCES auth_user (id) ON DELETE CASCADE,
+    group_id INT, INDEX group_id__idx (group_id), FOREIGN KEY (group_id) REFERENCES auth_group (id) ON DELETE CASCADE,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+success!
+timestamp: 2015-07-01T12:26:02.828964
+CREATE TABLE auth_permission(
+    id INT AUTO_INCREMENT NOT NULL,
+    group_id INT, INDEX group_id__idx (group_id), FOREIGN KEY (group_id) REFERENCES auth_group (id) ON DELETE CASCADE,
+    name VARCHAR(512),
+    table_name VARCHAR(512),
+    record_id INT,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+success!
+timestamp: 2015-07-01T12:26:02.841870
+CREATE TABLE auth_event(
+    id INT AUTO_INCREMENT NOT NULL,
+    time_stamp DATETIME,
+    client_ip VARCHAR(512),
+    user_id INT, INDEX user_id__idx (user_id), FOREIGN KEY (user_id) REFERENCES auth_user (id) ON DELETE CASCADE,
+    origin VARCHAR(512),
+    description LONGTEXT,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+success!
+timestamp: 2015-07-01T12:26:02.865608
+CREATE TABLE auth_cas(
+    id INT AUTO_INCREMENT NOT NULL,
+    user_id INT, INDEX user_id__idx (user_id), FOREIGN KEY (user_id) REFERENCES auth_user (id) ON DELETE CASCADE,
+    created_on DATETIME,
+    service VARCHAR(512),
+    ticket VARCHAR(512),
+    renew CHAR(1),
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+success!
+timestamp: 2015-07-01T12:26:02.872014
+CREATE TABLE Applicant(
+    id INT AUTO_INCREMENT NOT NULL,
+    ap_name VARCHAR(512),
+    ap_emailid VARCHAR(512),
+    ap_rollno INT,
+    ap_cgpa DOUBLE,
+    ap_phoneno INT,
+    ap_prevexp VARCHAR(512),
+    ap_program VARCHAR(512),
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+timestamp: 2015-07-01T12:29:35.023671
+CREATE TABLE auth_user(
+    id INT AUTO_INCREMENT NOT NULL,
+    first_name VARCHAR(128),
+    last_name VARCHAR(128),
+    email VARCHAR(512),
+    password VARCHAR(512),
+    registration_key VARCHAR(512),
+    reset_password_key VARCHAR(512),
+    registration_id VARCHAR(512),
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+success!
+timestamp: 2015-07-01T12:29:35.038836
+CREATE TABLE auth_group(
+    id INT AUTO_INCREMENT NOT NULL,
+    role VARCHAR(512),
+    description LONGTEXT,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+success!
+timestamp: 2015-07-01T12:29:35.043272
+CREATE TABLE auth_membership(
+    id INT AUTO_INCREMENT NOT NULL,
+    user_id INT, INDEX user_id__idx (user_id), FOREIGN KEY (user_id) REFERENCES auth_user (id) ON DELETE CASCADE,
+    group_id INT, INDEX group_id__idx (group_id), FOREIGN KEY (group_id) REFERENCES auth_group (id) ON DELETE CASCADE,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+success!
+timestamp: 2015-07-01T12:29:35.048427
+CREATE TABLE auth_permission(
+    id INT AUTO_INCREMENT NOT NULL,
+    group_id INT, INDEX group_id__idx (group_id), FOREIGN KEY (group_id) REFERENCES auth_group (id) ON DELETE CASCADE,
+    name VARCHAR(512),
+    table_name VARCHAR(512),
+    record_id INT,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+success!
+timestamp: 2015-07-01T12:29:35.053459
+CREATE TABLE auth_event(
+    id INT AUTO_INCREMENT NOT NULL,
+    time_stamp DATETIME,
+    client_ip VARCHAR(512),
+    user_id INT, INDEX user_id__idx (user_id), FOREIGN KEY (user_id) REFERENCES auth_user (id) ON DELETE CASCADE,
+    origin VARCHAR(512),
+    description LONGTEXT,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+success!
+timestamp: 2015-07-01T12:29:35.063944
+CREATE TABLE auth_cas(
+    id INT AUTO_INCREMENT NOT NULL,
+    user_id INT, INDEX user_id__idx (user_id), FOREIGN KEY (user_id) REFERENCES auth_user (id) ON DELETE CASCADE,
+    created_on DATETIME,
+    service VARCHAR(512),
+    ticket VARCHAR(512),
+    renew CHAR(1),
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+success!
+timestamp: 2015-07-01T12:29:35.078907
+CREATE TABLE Applicant(
+    id INT AUTO_INCREMENT NOT NULL,
+    ap_name VARCHAR(512),
+    ap_emailid VARCHAR(512),
+    ap_rollno INT,
+    ap_cgpa DOUBLE,
+    ap_phoneno INT,
+    ap_prevexp VARCHAR(512),
+    ap_program VARCHAR(512),
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+success!
+timestamp: 2015-07-01T12:29:35.082651
+CREATE TABLE Admin(
+    id INT AUTO_INCREMENT NOT NULL,
+    ad_name VARCHAR(512),
+    ad_emailid VARCHAR(512),
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+success!
+timestamp: 2015-07-01T12:29:35.086313
+CREATE TABLE Faculty(
+    id INT AUTO_INCREMENT NOT NULL,
+    fac_name VARCHAR(512),
+    fac_emailid VARCHAR(512),
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+success!
+timestamp: 2015-07-01T12:29:35.089724
+CREATE TABLE Semester(
+    id INT AUTO_INCREMENT NOT NULL,
+    sem_name VARCHAR(512),
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+success!
+timestamp: 2015-07-01T12:29:35.110073
+CREATE TABLE Course(
+    id INT AUTO_INCREMENT NOT NULL,
+    c_code VARCHAR(512),
+    c_name VARCHAR(512),
+    c_credits INT,
+    max_ta INT,
+    no_of_qta INT,
+    no_of_hta INT,
+    no_of_fta INT,
+    hrs_per_week INT,
+    sem_id INT, INDEX sem_id__idx (sem_id), FOREIGN KEY (sem_id) REFERENCES Semester (id) ON DELETE CASCADE,
+    c_type VARCHAR(512),
+    no_of_faculty INT,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+success!
+timestamp: 2015-07-01T12:29:35.122986
+CREATE TABLE Faculty_Course(
+    id INT AUTO_INCREMENT NOT NULL,
+    fac_id INT, INDEX fac_id__idx (fac_id), FOREIGN KEY (fac_id) REFERENCES Faculty (id) ON DELETE CASCADE,
+    c_id INT, INDEX c_id__idx (c_id), FOREIGN KEY (c_id) REFERENCES Course (id) ON DELETE CASCADE,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+success!
+timestamp: 2015-07-01T12:29:35.127950
+CREATE TABLE Nomination(
+    id INT AUTO_INCREMENT NOT NULL,
+    c_id INT, INDEX c_id__idx (c_id), FOREIGN KEY (c_id) REFERENCES Course (id) ON DELETE CASCADE,
+    ap_id INT, INDEX ap_id__idx (ap_id), FOREIGN KEY (ap_id) REFERENCES Applicant (id) ON DELETE CASCADE,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+success!
+timestamp: 2015-07-01T12:29:35.164459
+CREATE TABLE Selected(
+    id INT AUTO_INCREMENT NOT NULL,
+    ap_id INT, INDEX ap_id__idx (ap_id), FOREIGN KEY (ap_id) REFERENCES Applicant (id) ON DELETE CASCADE,
+    nom_id INT, INDEX nom_id__idx (nom_id), FOREIGN KEY (nom_id) REFERENCES Nomination (id) ON DELETE CASCADE,
+    c_id INT, INDEX c_id__idx (c_id), FOREIGN KEY (c_id) REFERENCES Course (id) ON DELETE CASCADE,
+    ta_type VARCHAR(512),
+    time_sel DATETIME,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+success!
+timestamp: 2015-07-01T12:29:35.173856
+CREATE TABLE Application(
+    id INT AUTO_INCREMENT NOT NULL,
+    ap_id INT, INDEX ap_id__idx (ap_id), FOREIGN KEY (ap_id) REFERENCES Applicant (id) ON DELETE CASCADE,
+    c_id INT, INDEX c_id__idx (c_id), FOREIGN KEY (c_id) REFERENCES Course (id) ON DELETE CASCADE,
+    grade VARCHAR(512),
+    applied_at DATETIME,
+    pref INT,
+    status VARCHAR(512),
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+success!
+timestamp: 2015-07-01T12:29:35.179160
+CREATE TABLE AppDeadline(
+    id INT AUTO_INCREMENT NOT NULL,
+    start DATETIME,
+    end DATETIME,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+success!
+timestamp: 2015-07-01T12:29:35.197613
+CREATE TABLE NomDeadline(
+    id INT AUTO_INCREMENT NOT NULL,
+    start DATETIME,
+    end DATETIME,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+success!
+success!
+timestamp: 2015-07-08T18:02:13.216895
+ALTER TABLE Applicant ADD ap_phoneno__tmp INT;
+success!
+UPDATE Applicant SET ap_phoneno__tmp=ap_phoneno;
+success!
+ALTER TABLE Applicant DROP COLUMN ap_phoneno;
+success!
+ALTER TABLE Applicant ADD ap_phoneno INT;
+success!
+UPDATE Applicant SET ap_phoneno=ap_phoneno__tmp;
+success!
+ALTER TABLE Applicant DROP COLUMN ap_phoneno__tmp;
+success!
+success!
+timestamp: 2015-07-08T18:02:39.072974
+ALTER TABLE Applicant ADD ap_phoneno__tmp VARCHAR(512);
+success!
+UPDATE Applicant SET ap_phoneno__tmp=ap_phoneno;
+success!
+ALTER TABLE Applicant DROP COLUMN ap_phoneno;
+success!
+ALTER TABLE Applicant ADD ap_phoneno VARCHAR(512);
+success!
+UPDATE Applicant SET ap_phoneno=ap_phoneno__tmp;
+success!
+ALTER TABLE Applicant DROP COLUMN ap_phoneno__tmp;
+success!
+success!
+timestamp: 2015-07-09T23:18:52.433459
+CREATE TABLE UploadFile(
+    id INT AUTO_INCREMENT NOT NULL,
+    upfile VARCHAR(512),
+    PRIMARY KEY (id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+success!
+timestamp: 2015-07-10T00:34:57.256484
+ALTER TABLE Course DROP COLUMN hrs_per_week;
+success!
+timestamp: 2015-07-10T04:03:51.918740
+ALTER TABLE Applicant ADD ap_status VARCHAR(512);
+success!
+success!
+timestamp: 2015-07-10T04:54:51.809982
+ALTER TABLE Nomination ADD type VARCHAR(512);
+success!
+success!
+timestamp: 2015-07-11T16:25:45.430860
+ALTER TABLE Applicant DROP COLUMN ap_status;
+success!

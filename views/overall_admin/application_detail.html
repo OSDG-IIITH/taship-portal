@@ -1,0 +1,62 @@
+{{extend 'layout.html'}}
+
+<div style="width:100%; float:left">
+<br/>
+<br/>
+
+<h4>Filter By</h4>
+<form name="SelectCourse" action="{{=URL('overall_admin', 'application_detail')}}">
+	<select name="sel_courseid">
+		<option value="all">All</option>
+	{{for course in course_list:}}
+		{{if courseid and course.id==courseid:}}
+		<option value="{{=course.id}}" selected>{{=course.c_name}}</option>
+		{{else:}}
+		<option value="{{=course.id}}">{{=course.c_name}}</option>
+		{{pass}}
+	{{pass}}
+	<input type="submit" value="Go!">
+	</select>
+</form>
+
+<form name="AcceptApplication" action="{{=URL('overall_admin', 'accept_application')}}">
+<table border='5px' style="width:100%" class="table table-bordered table-hover">
+    <caption>{{if courseid and courseid!='all':}}{{=db(db.Course.id==courseid).select()[0]['c_name']}}{{pass}} Applications :</caption>
+    <thead>
+    <tr>
+        <th style="text-align:center">ID</th>
+        <th style="text-align:center">Applicant</th>
+        <th style="text-align:center">Roll No</th>
+        <th style="text-align:center">Course</th>
+        <th style="text-align:center">Grade</th>
+        <th style="text-align:center">CGPA</th>
+        <th style="text-align:center">Preference</th>
+        <th style="text-align:center">Status</th>
+        <th style="text-align:center; color:red">Accept Application</th>
+    </tr>
+    </thead>
+    {{for app in appDetail:}}
+    {{if app['Application']['status']=='Selected':}}
+	{{color='red'}}
+    {{elif app['Application']['status']=='Nominated':}}
+	{{color='cyan'}}
+    {{else:}}
+	{{color=''}}
+    {{pass}}
+    <tr style="color:{{=color}}">
+        <td style="text-align:center">{{=app['Application']['id']}}</td>
+        <td style="text-align:center">{{=app['Applicant']['ap_name']}}</td>
+        <td style="text-align:center">{{=app['Applicant']['ap_rollno']}}</td>
+        <td style="text-align:center">{{=app['Course']['c_name']}}</td>
+        <td style="text-align:center">{{=app['Application']['grade']}}</td>
+        <td style="text-align:center">{{=app['Applicant']['ap_cgpa']}}</td>
+        <td style="text-align:center">{{=app['Application']['pref']}}</td>
+        <td style="text-align:center">{{=app['Application']['status']}}</td>
+        <td style="text-align:center"><input type="checkbox" name="check" value="{{=app['Application']['id']}}"/></td>
+    </tr>
+    {{pass}}
+</table>
+<br/>
+<input style="float:right" type="submit" value="Accept Selected Applications">
+</form>
+</div>

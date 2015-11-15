@@ -1,0 +1,38 @@
+{{extend 'layout.html'}}
+
+<br/>
+<div id='apply-form' style="width:100%;">
+<h3>Apply for TAship</h3>
+{{=applicationForm}}
+</div>
+<br/>
+<br/>
+{{if filledApps:}}
+<table border='5px' style='width:100%' class="table table-bordered table-hover">
+    <caption>Application Status</caption>
+    <thead>
+    <tr>
+        <th style="text-align:center">Course</th>
+        <th style="text-align:center">Grade</th>
+        <th style="text-align:center">Preference</th>
+        <th style="text-align:center">Applied At</th>
+        <th style="text-align:center">Status</th>
+        <th style="text-align:center; color:blue">Update Preference</th>
+        <th style="text-align:center; color:red">Delete Application</th>
+    </tr>  
+    </thead>
+    <form name="UpdatePreference" action="{{=URL('default','update_pref')}}">  
+    {{for app in filledApps:}}
+    <tr>
+        <td style="text-align:center">{{=app['Course']['c_name']}}</td>
+        <td style="text-align:center">{{=app['Application']['grade']}}</td>
+        <td style="text-align:center">{{=app['Application']['pref']}}</td>
+        <td style="text-align:center">{{=app['Application']['applied_at']}}</td>
+        <td style="text-align:center">{{=app['Application']['status']}}</td>
+        <td style="text-align:center">{{if app['Application']['pref']!=1:}}<button type="submit" name="pref_val" value={{=app['Application']['pref']}}>Move Up</button>{{pass}}</td>
+        <td style="text-align:center"><button type="submit" name="app_id" value={{=app['Application']['id']}}>Delete</button></td>
+    </tr>    
+    {{pass}}
+    </form>
+</table> 
+{{pass}}

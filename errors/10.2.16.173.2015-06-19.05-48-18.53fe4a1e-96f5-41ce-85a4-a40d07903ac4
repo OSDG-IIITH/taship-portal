@@ -1,0 +1,373 @@
+(dp1
+S'output'
+p2
+S"<type 'exceptions.ImportError'> Cannot import module 'send_mail'"
+p3
+sS'layer'
+p4
+S'/var/www/html/web2py/applications/taportal/controllers/default.py'
+p5
+sS'code'
+p6
+S'# -*- coding: utf-8 -*-\n\n#########################################################################\nimport ldap\nimport send_mail\nimport gluon\n#########################################################################\n\n\n#########################################################################\nCAS.login_url=\'https://login.iiit.ac.in/cas/login\'\nCAS.check_url=\'https://login.iiit.ac.in/cas/validate\'\nCAS.logout_url=\'https://login.iiit.ac.in/cas/logout\'\nCAS.my_url=\'http://taship.iiit.ac.in/taportal/default/login\'\n#CAS.my_url=\'http://localhost:8000/taportal/default/login\'\n#########################################################################\n\n# To make sure everyone logins\nif not session.token and not request.function==\'login\':\n    redirect(URL(r=request, f=\'login\'))\n\nsend_mail.sendmail(\'mohit.jain@research.iiit.ac.in\',\'mohit.jain@research.iiit.ac.in\',\'hello there!\',\'test mail\')\n\ndef login():\n    """\n    Method to fetch the user detials from CAS\n    Redirects to respective user interface\n    """\n    session.login = 0\n    session.token = CAS.login(request)\n    user_email=session.token\n\n    l = ldap.initialize("ldap://ldap.iiit.ac.in")\n    l.protocol_version = ldap.VERSION3\n    baseDN = "ou=Users,dc=iiit,dc=ac,dc=in"\n    searchScope = ldap.SCOPE_SUBTREE\n    searchFilter = "mail="+user_email    \n    result = l.search_s(baseDN, searchScope, searchFilter)\n    result = result[0][1]\n\n    user_name = result[\'cn\'][0]\n    \n    session.name = user_name\n    session.email = user_email\n    \n    if \'uidNumber\' in result:\n        user_roll = result[\'uidNumber\'][0]\n    else:\n        user_roll = result[\'uid\'][0]\n\n    # check if admin\n    is_admin = db(db.Admin.ad_emailid==user_email).select(db.Admin.ALL)\n    if is_admin:\n        session.login = 1\n        redirect(URL(\'overall_admin\',\'index\'))\n\n    # check if faculty\n    is_faculty = db(db.Faculty.fac_emailid==user_email).select(db.Faculty.ALL)\n    if is_faculty:\n        session.login = 2\n        redirect(URL(\'faculty\',\'index\'))\n\n    # else is student. Check if details are filled already.\n    has_applied = db(db.Applicant.ap_emailid==user_email).select(db.Applicant.ALL)\n    session.login = 3\n    session.roll = user_roll\n    if has_applied:\n        redirect(URL(\'default\',\'index\'))\n    else:\n        redirect(URL(\'default\',\'fill_details\'))\n\ndef logout():\n    session.token = None\n    CAS.logout()\n\ndef check_usertype():\n    """\n    Redirects malicious users to their homepages.\n    """\n    if session.login==1:\n        msg = \'Stop trying to mess things up -_-\'\n        redirect(URL(\'overall_admin\',\'index?message=%s\'%msg))\n    elif session.login==2:\n        msg = \'Stop trying to mess things up -_-\'\n        redirect(URL(\'faculty\',\'index?message=%s\'%msg))\n    elif session.login==3:\n        msg = \'Stop trying to mess things up -_-\'\n        redirect(URL(\'default\',\'index?message=%s\'%msg))\n    session.flash = \'An unexpected error occured :/\'\n    redirect(URL(\'default\',\'login\'))\n\ndef index():\n    """\n    Landing page for students.\n    """\n    if not session.login==3:\n        check_usertype()\n    \n    if not request.vars.message:\n\tmessage=\'Greetings \'+session.name\n    else:\n        message=request.vars.message\n\n    response.flash = T(message)\n    message = \'Welcome to TAship Portal!\'\n    return locals()\n\ndef fill_details():\n    """\n    Get complete details of the applicant.\n    """\n    if not session.login==3:\n        check_usertype()\n    \n    db.Applicant.ap_name.default=session.name\n    db.Applicant.ap_emailid.default=session.email\n    db.Applicant.ap_rollno.default=session.roll\n    db.Applicant.ap_name.writable=False\n    db.Applicant.ap_emailid.writable=False\n    db.Applicant.ap_rollno.writable=False\n   \n    has_applied = db(db.Applicant.ap_emailid==session.email).select(db.Applicant.ALL)\n    if has_applied:\n        applicantForm = SQLFORM(db.Applicant,db.Applicant(has_applied[0][\'id\']))\n    else:\n        applicantForm = SQLFORM(db.Applicant)\n    if applicantForm.process().accepted:\n        user_id = db(db.Applicant.ap_emailid==session.email).select(db.Applicant.ALL)[0][\'id\']\n        session.userid = user_id\n        response.flash = \'Applicant Details Updated\'\n        redirect(URL(\'default\',\'index\'))\n    elif applicantForm.errors:\n        response.flash = \'Form has errors!\'\n\n    return locals()\n\ndef apply():\n    """\n    Method shows form for applying as TA.\n    Options to move preference up/down or remove application.\n    """\n    if not session.login==3:\n        check_usertype()\n   \n    AppTime = db(db.AppDeadline.id>0).select(db.AppDeadline.ALL)[0]\n    startTime = AppTime[\'start\']\n    endTime = AppTime[\'end\']\n\n    if request.now < startTime:\n\tmsg = \'Application Period starts on \'+str(startTime)\n        redirect(URL(\'default\',\'index?message=%s\'%msg))\n    if request.now > endTime:\n\tmsg = \'Application Period has ended on \'+str(endTime)\n        redirect(URL(\'default\',\'index?message=%s\'%msg))\n \n    filledApps = db((db.Application.ap_id==session.userid) & (db.Application.c_id==db.Course.id) &(db.Application.ap_id==db.Applicant.id)).select(db.Application.ALL, db.Applicant.ALL, db.Course.ALL, orderby=db.Application.pref)\n    \n    cur_pref = 1\n    if filledApps: \n        cur_pref = filledApps[-1][\'Application\'][\'pref\']+1\n    \n    db.Application.ap_id.default = session.userid\n    db.Application.ap_id.writable = False\n    db.Application.pref.default = cur_pref\n    db.Application.pref.writable = False\n    applicationForm = SQLFORM(db.Application)\n    if applicationForm.process().accepted:\n        response.flash = \'Application Successfully Submitted!\'\n        redirect(URL(\'default\',\'apply\'))\n    elif applicationForm.errors:\n        response.flash = \'Form has errors!\'\n\n    return locals()\n\ndef update_pref():\n    """\n    Updates the preference of applications moving requested application one step up.\n    """\n    if not session.login==3:\n        check_usertype()\n    \n    if request.vars.pref_val:\n        source_pref = int(request.vars.pref_val)\n        target_pref = source_pref-1\n        if source_pref==1:\n            session.flash = \'Stop trying to mess things up -_-\'\n            redirect(URL(\'default\',\'apply\'))\n    \n        source_app = db((db.Application.ap_id==session.userid) & (db.Application.pref==source_pref)).select(db.Application.ALL)\n        target_app = db((db.Application.ap_id==session.userid) & (db.Application.pref==target_pref)).select(db.Application.ALL)\n\n        if source_app and target_app:\n            db(db.Application.id==source_app[0][\'id\']).update(pref=target_pref)\n            db(db.Application.id==target_app[0][\'id\']).update(pref=source_pref)\n            redirect(URL(\'default\',\'apply\'))\n        else:\n            session.flash = \'Stop trying to mess things up -_-\'\n            redirect(URL(\'default\',\'apply\'))\n    elif request.vars.app_id:\n        del_app_id = int(request.vars.app_id)\n        del_app_pref = db((db.Application.ap_id==session.userid) & (db.Application.id==del_app_id)).select(db.Application.ALL)\n        if not del_app_pref:\n            session.flash = \'Stop trying to mess things up -_-\'\n            redirect(URL(\'default\',\'apply\'))\n        \n        del_app_pref = del_app_pref[0][\'pref\']\n        len_prefs = len(db(db.Application.ap_id==session.userid).select(db.Application.ALL))\n        for ap_pref in range(del_app_pref+1,len_prefs+1):\n            db((db.Application.ap_id==session.userid) & (db.Application.pref==ap_pref)).update(pref=ap_pref-1)\n        db(db.Application.id==del_app_id).delete()\n        redirect(URL(\'default\',\'apply\'))\n    else:\n        session.response = \'Invalid Request\'\n        redirect(URL(\'default\',\'apply\'))\n\ndef admin_page():\n    """\n    Display the list of Admins.\n    """\n    adminList = db(db.Admin.id>0).select(db.Admin.ALL)\n    \n    return locals()\n\ndef user():\n    """\n    exposes:\n    http://..../[app]/default/user/login\n    http://..../[app]/default/user/logout\n    http://..../[app]/default/user/register\n    http://..../[app]/default/user/profile\n    http://..../[app]/default/user/retrieve_password\n    http://..../[app]/default/user/change_password\n    http://..../[app]/default/user/manage_users (requires membership in\n    use @auth.requires_login()\n        @auth.requires_membership(\'group name\')\n        @auth.requires_permission(\'read\',\'table name\',record_id)\n    to decorate functions that need access control\n    """\n    return dict(form=auth())\n\n\n@cache.action()\ndef download():\n    """\n    allows downloading of uploaded files\n    http://..../[app]/default/download/[filename]\n    """\n    return response.download(request, db)\n\n\ndef call():\n    """\n    exposes services. for example:\n    http://..../[app]/default/call/jsonrpc\n    decorate with @services.jsonrpc the functions to expose\n    supports xml, json, xmlrpc, jsonrpc, amfrpc, rss, csv\n    """\n    return service()\n\n\n\nresponse._vars=response._caller(index)\n'
+p7
+sS'snapshot'
+p8
+(dp9
+S'exception'
+p10
+(dp11
+S'__hash__'
+p12
+S"<method-wrapper '__hash__' of exceptions.ImportError object>"
+p13
+sS'__setattr__'
+p14
+S"<method-wrapper '__setattr__' of exceptions.ImportError object>"
+p15
+sS'__reduce_ex__'
+p16
+S'<built-in method __reduce_ex__ of exceptions.ImportError object>'
+p17
+sS'__getslice__'
+p18
+S"<method-wrapper '__getslice__' of exceptions.ImportError object>"
+p19
+sS'__getitem__'
+p20
+S"<method-wrapper '__getitem__' of exceptions.ImportError object>"
+p21
+sS'__setstate__'
+p22
+S'<built-in method __setstate__ of exceptions.ImportError object>'
+p23
+sS'args'
+p24
+S'("Cannot import module \'send_mail\'",)'
+p25
+sS'__reduce__'
+p26
+S'<built-in method __reduce__ of exceptions.ImportError object>'
+p27
+sS'__str__'
+p28
+S"<method-wrapper '__str__' of exceptions.ImportError object>"
+p29
+sS'__format__'
+p30
+S'<built-in method __format__ of exceptions.ImportError object>'
+p31
+sS'__getattribute__'
+p32
+S"<method-wrapper '__getattribute__' of exceptions.ImportError object>"
+p33
+sS'__class__'
+p34
+S"<type 'exceptions.ImportError'>"
+p35
+sS'__unicode__'
+p36
+S'<built-in method __unicode__ of exceptions.ImportError object>'
+p37
+sS'__delattr__'
+p38
+S"<method-wrapper '__delattr__' of exceptions.ImportError object>"
+p39
+sS'__subclasshook__'
+p40
+S'<built-in method __subclasshook__ of type object>'
+p41
+sS'__repr__'
+p42
+S"<method-wrapper '__repr__' of exceptions.ImportError object>"
+p43
+sS'__dict__'
+p44
+S'{}'
+p45
+sS'__sizeof__'
+p46
+S'<built-in method __sizeof__ of exceptions.ImportError object>'
+p47
+sS'__doc__'
+p48
+S'"Import can\'t find module, or can\'t find name in module."'
+p49
+sS'__init__'
+p50
+S"<method-wrapper '__init__' of exceptions.ImportError object>"
+p51
+sS'__new__'
+p52
+S'<built-in method __new__ of type object>'
+p53
+ssS'evalue'
+p54
+S"Cannot import module 'send_mail'"
+p55
+sS'request'
+p56
+cgluon.html
+XML_unpickle
+p57
+(S's\xf6Y\x00\x00<div><table><tr><td style="font-weight:bold;vertical-align:top;">ajax</td><td style="vertical-align:top;">:</td><td><div>False</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">application</td><td style="vertical-align:top;">:</td><td><div>taportal</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">args</td><td style="vertical-align:top;">:</td><td><div><table></table></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">cid</td><td style="vertical-align:top;">:</td><td><div>None</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">client</td><td style="vertical-align:top;">:</td><td><div>10.2.16.173</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">controller</td><td style="vertical-align:top;">:</td><td><div>default</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">cookies</td><td style="vertical-align:top;">:</td><td><div><table><tr><td style="font-weight:bold;vertical-align:top;">session_id_admin</td><td style="vertical-align:top;">:</td><td><div>10.2.16.173-c77f8cb7-1403-4e68-817d-f5dca582888b<table><tr><td style="font-weight:bold;vertical-align:top;">comment</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">domain</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">expires</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">httponly</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">max-age</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">path</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">secure</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">version</td><td style="vertical-align:top;">:</td><td><div></div></td></tr></table></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">session_id_taportal</td><td style="vertical-align:top;">:</td><td><div>10.2.16.173-2df901fc-6a64-4ef3-811a-ff2dad38fb60<table><tr><td style="font-weight:bold;vertical-align:top;">comment</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">domain</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">expires</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">httponly</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">max-age</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">path</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">secure</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">version</td><td style="vertical-align:top;">:</td><td><div></div></td></tr></table></div></td></tr></table></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">env</td><td style="vertical-align:top;">:</td><td><div><table><tr><td style="font-weight:bold;vertical-align:top;">HTTP_ACCEPT</td><td style="vertical-align:top;">:</td><td><div>text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">HTTP_ACCEPT_ENCODING</td><td style="vertical-align:top;">:</td><td><div>gzip, deflate, sdch</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">HTTP_ACCEPT_LANGUAGE</td><td style="vertical-align:top;">:</td><td><div>en-US,en;q=0.8</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">HTTP_CONNECTION</td><td style="vertical-align:top;">:</td><td><div>Keep-Alive</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">HTTP_COOKIE</td><td style="vertical-align:top;">:</td><td><div>session_id_taportal=10.2.16.173-2df901fc-6a64-4ef3-811a-ff2dad38fb60; session_id_admin=10.2.16.173-c77f8cb7-1403-4e68-817d-f5dca582888b</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">HTTP_HOST</td><td style="vertical-align:top;">:</td><td><div>localhost:8000</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">HTTP_USER_AGENT</td><td style="vertical-align:top;">:</td><td><div>Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.125 Safari/537.36</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">HTTP_X_FORWARDED_FOR</td><td style="vertical-align:top;">:</td><td><div>10.2.16.173</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">HTTP_X_FORWARDED_HOST</td><td style="vertical-align:top;">:</td><td><div>taship.iiit.ac.in</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">HTTP_X_FORWARDED_SERVER</td><td style="vertical-align:top;">:</td><td><div>taship.iiit.ac.in</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">PATH_INFO</td><td style="vertical-align:top;">:</td><td><div>/taportal</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">QUERY_STRING</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">REMOTE_ADDR</td><td style="vertical-align:top;">:</td><td><div>127.0.0.1</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">REMOTE_PORT</td><td style="vertical-align:top;">:</td><td><div>59484</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">REQUEST_METHOD</td><td style="vertical-align:top;">:</td><td><div>GET</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">SCRIPT_NAME</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">SERVER_NAME</td><td style="vertical-align:top;">:</td><td><div>taship.iiit.ac.in</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">SERVER_PORT</td><td style="vertical-align:top;">:</td><td><div>8000</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">SERVER_PROTOCOL</td><td style="vertical-align:top;">:</td><td><div>HTTP/1.1</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">SERVER_SOFTWARE</td><td style="vertical-align:top;">:</td><td><div>Rocket 1.2.6</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">app_folders</td><td style="vertical-align:top;">:</td><td><div>set([&#x27;/var/www/html/web2py/applications/taportal/&#x27;, &#x27;/var/www/html/web2py/applications/taship/&#x27;, &#x27;/var/www/html/web2py/applications/examples/&#x27;, &#x27;/var/www/html/web2py/applications/welcome/&#x27;, &#x27;/var/www/html/web2py/applications/taportal_v2/&#x27;, &#x27;/var/www/html/web2py/applications/TestTAship/&#x27;, &#x27;/var/www/html/web2py/applications/test_taship/&#x27;, &#x27;/var/www/html/web2py/applications/admin/&#x27;])</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">applications_parent</td><td style="vertical-align:top;">:</td><td><div>/var/www/html/web2py</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">cmd_args</td><td style="vertical-align:top;">:</td><td><div><table></table></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">cmd_options</td><td style="vertical-align:top;">:</td><td><div>&lt;Values at 0x2d02440: {&#x27;verbose&#x27;: False, &#x27;ip&#x27;: &#x27;127.0.0.1&#x27;, &#x27;debuglevel&#x27;: 30, &#x27;with_scheduler&#x27;: False, &#x27;ips&#x27;: [&#x27;127.0.0.1&#x27;], &#x27;shutdown_timeout&#x27;: 5, &#x27;taskbar&#x27;: False, &#x27;with_coverage&#x27;: False, &#x27;scheduler_groups&#x27;: None, &#x27;port&#x27;: 8000, &#x27;maxthreads&#x27;: None, &#x27;softcron&#x27;: False, &#x27;server_name&#x27;: &#x27;taship.iiit.ac.in&#x27;, &#x27;bpython&#x27;: False, &#x27;nogui&#x27;: False, &#x27;pid_filename&#x27;: &#x27;/var/www/html/web2py.pid&#x27;, &#x27;extcron&#x27;: False, &#x27;runcron&#x27;: False, &#x27;run_system_tests&#x27;: False, &#x27;test&#x27;: None, &#x27;folder&#x27;: &#x27;/var/www/html/web2py&#x27;, &#x27;config&#x27;: &#x27;&#x27;, &#x27;minthreads&#x27;: 50, &#x27;shell&#x27;: None, &#x27;run&#x27;: &#x27;&#x27;, &#x27;log_filename&#x27;: &#x27;httpserver.log&#x27;, &#x27;profiler_dir&#x27;: None, &#x27;args&#x27;: [&#x27;&#x27;], &#x27;socket_timeout&#x27;: 5, &#x27;ssl_ca_certificate&#x27;: None, &#x27;scheduler&#x27;: None, &#x27;interfaces&#x27;: None, &#x27;ssl_private_key&#x27;: &#x27;&#x27;, &#x27;gae&#x27;: None, &#x27;password&#x27;: &#x27;&#x27;, &#x27;request_queue_size&#x27;: 5, &#x27;ssl_certificate&#x27;: &#x27;&#x27;, &#x27;cronjob&#x27;: False, &#x27;numthreads&#x27;: 50, &#x27;quiet&#x27;: False, &#x27;import_models&#x27;: False, &#x27;timeout&#x27;: 10, &#x27;plain&#x27;: True, &#x27;nobanner&#x27;: False}&gt;</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">db_sessions</td><td style="vertical-align:top;">:</td><td><div>set([])</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">debugging</td><td style="vertical-align:top;">:</td><td><div>False</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">gluon_parent</td><td style="vertical-align:top;">:</td><td><div>/var/www/html/web2py</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">http_accept</td><td style="vertical-align:top;">:</td><td><div>text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">http_accept_encoding</td><td style="vertical-align:top;">:</td><td><div>gzip, deflate, sdch</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">http_accept_language</td><td style="vertical-align:top;">:</td><td><div>en-US,en;q=0.8</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">http_connection</td><td style="vertical-align:top;">:</td><td><div>Keep-Alive</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">http_cookie</td><td style="vertical-align:top;">:</td><td><div>session_id_taportal=10.2.16.173-2df901fc-6a64-4ef3-811a-ff2dad38fb60; session_id_admin=10.2.16.173-c77f8cb7-1403-4e68-817d-f5dca582888b</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">http_host</td><td style="vertical-align:top;">:</td><td><div>localhost:8000</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">http_user_agent</td><td style="vertical-align:top;">:</td><td><div>Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.125 Safari/537.36</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">http_x_forwarded_for</td><td style="vertical-align:top;">:</td><td><div>10.2.16.173</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">http_x_forwarded_host</td><td style="vertical-align:top;">:</td><td><div>taship.iiit.ac.in</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">http_x_forwarded_server</td><td style="vertical-align:top;">:</td><td><div>taship.iiit.ac.in</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">is_jython</td><td style="vertical-align:top;">:</td><td><div>False</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">is_pypy</td><td style="vertical-align:top;">:</td><td><div>False</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">is_source</td><td style="vertical-align:top;">:</td><td><div>True</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">local_hosts</td><td style="vertical-align:top;">:</td><td><div><table><tr><td><div>taship.iiit.ac.in</div></td></tr><tr><td><div>::1</div></td></tr><tr><td><div>::ffff:127.0.0.1</div></td></tr><tr><td><div>127.0.0.1</div></td></tr></table></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">path_info</td><td style="vertical-align:top;">:</td><td><div>/taportal</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">query_string</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">remote_addr</td><td style="vertical-align:top;">:</td><td><div>127.0.0.1</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">remote_port</td><td style="vertical-align:top;">:</td><td><div>59484</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">request_method</td><td style="vertical-align:top;">:</td><td><div>GET</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">request_uri</td><td style="vertical-align:top;">:</td><td><div>/taportal</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">script_name</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">server_name</td><td style="vertical-align:top;">:</td><td><div>taship.iiit.ac.in</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">server_port</td><td style="vertical-align:top;">:</td><td><div>8000</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">server_protocol</td><td style="vertical-align:top;">:</td><td><div>HTTP/1.1</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">server_software</td><td style="vertical-align:top;">:</td><td><div>Rocket 1.2.6</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">web2py_path</td><td style="vertical-align:top;">:</td><td><div>/var/www/html/web2py</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">web2py_version</td><td style="vertical-align:top;">:</td><td><div>2.9.11-stable+timestamp.2014.09.15.23.35.11</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">wsgi.errors</td><td style="vertical-align:top;">:</td><td><div>&lt;open file &#x27;&lt;stderr&gt;&#x27;, mode &#x27;w&#x27; at 0x7f2eee6761e0&gt;</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">wsgi.file_wrapper</td><td style="vertical-align:top;">:</td><td><div>&lt;class wsgiref.util.FileWrapper at 0x2c66470&gt;</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">wsgi.input</td><td style="vertical-align:top;">:</td><td><div>&lt;socket._fileobject object at 0x7f2e8dbcf5d0&gt;</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">wsgi.multiprocess</td><td style="vertical-align:top;">:</td><td><div>False</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">wsgi.multithread</td><td style="vertical-align:top;">:</td><td><div>True</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">wsgi.run_once</td><td style="vertical-align:top;">:</td><td><div>False</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">wsgi.url_scheme</td><td style="vertical-align:top;">:</td><td><div>http</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">wsgi.version</td><td style="vertical-align:top;">:</td><td><div><table><tr><td><div>1</div></td></tr><tr><td><div>0</div></td></tr></table></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">wsgi_errors</td><td style="vertical-align:top;">:</td><td><div>&lt;open file &#x27;&lt;stderr&gt;&#x27;, mode &#x27;w&#x27; at 0x7f2eee6761e0&gt;</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">wsgi_file_wrapper</td><td style="vertical-align:top;">:</td><td><div>&lt;class wsgiref.util.FileWrapper at 0x2c66470&gt;</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">wsgi_input</td><td style="vertical-align:top;">:</td><td><div>&lt;socket._fileobject object at 0x7f2e8dbcf5d0&gt;</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">wsgi_multiprocess</td><td style="vertical-align:top;">:</td><td><div>False</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">wsgi_multithread</td><td style="vertical-align:top;">:</td><td><div>True</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">wsgi_run_once</td><td style="vertical-align:top;">:</td><td><div>False</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">wsgi_url_scheme</td><td style="vertical-align:top;">:</td><td><div>http</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">wsgi_version</td><td style="vertical-align:top;">:</td><td><div><table><tr><td><div>1</div></td></tr><tr><td><div>0</div></td></tr></table></div></td></tr></table></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">extension</td><td style="vertical-align:top;">:</td><td><div>html</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">folder</td><td style="vertical-align:top;">:</td><td><div>/var/www/html/web2py/applications/taportal/</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">function</td><td style="vertical-align:top;">:</td><td><div>index</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">global_settings</td><td style="vertical-align:top;">:</td><td><div><table><tr><td style="font-weight:bold;vertical-align:top;">app_folders</td><td style="vertical-align:top;">:</td><td><div>set([&#x27;/var/www/html/web2py/applications/taportal/&#x27;, &#x27;/var/www/html/web2py/applications/taship/&#x27;, &#x27;/var/www/html/web2py/applications/examples/&#x27;, &#x27;/var/www/html/web2py/applications/welcome/&#x27;, &#x27;/var/www/html/web2py/applications/taportal_v2/&#x27;, &#x27;/var/www/html/web2py/applications/TestTAship/&#x27;, &#x27;/var/www/html/web2py/applications/test_taship/&#x27;, &#x27;/var/www/html/web2py/applications/admin/&#x27;])</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">applications_parent</td><td style="vertical-align:top;">:</td><td><div>/var/www/html/web2py</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">cmd_args</td><td style="vertical-align:top;">:</td><td><div><table></table></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">cmd_options</td><td style="vertical-align:top;">:</td><td><div>&lt;Values at 0x2d02440: {&#x27;verbose&#x27;: False, &#x27;ip&#x27;: &#x27;127.0.0.1&#x27;, &#x27;debuglevel&#x27;: 30, &#x27;with_scheduler&#x27;: False, &#x27;ips&#x27;: [&#x27;127.0.0.1&#x27;], &#x27;shutdown_timeout&#x27;: 5, &#x27;taskbar&#x27;: False, &#x27;with_coverage&#x27;: False, &#x27;scheduler_groups&#x27;: None, &#x27;port&#x27;: 8000, &#x27;maxthreads&#x27;: None, &#x27;softcron&#x27;: False, &#x27;server_name&#x27;: &#x27;taship.iiit.ac.in&#x27;, &#x27;bpython&#x27;: False, &#x27;nogui&#x27;: False, &#x27;pid_filename&#x27;: &#x27;/var/www/html/web2py.pid&#x27;, &#x27;extcron&#x27;: False, &#x27;runcron&#x27;: False, &#x27;run_system_tests&#x27;: False, &#x27;test&#x27;: None, &#x27;folder&#x27;: &#x27;/var/www/html/web2py&#x27;, &#x27;config&#x27;: &#x27;&#x27;, &#x27;minthreads&#x27;: 50, &#x27;shell&#x27;: None, &#x27;run&#x27;: &#x27;&#x27;, &#x27;log_filename&#x27;: &#x27;httpserver.log&#x27;, &#x27;profiler_dir&#x27;: None, &#x27;args&#x27;: [&#x27;&#x27;], &#x27;socket_timeout&#x27;: 5, &#x27;ssl_ca_certificate&#x27;: None, &#x27;scheduler&#x27;: None, &#x27;interfaces&#x27;: None, &#x27;ssl_private_key&#x27;: &#x27;&#x27;, &#x27;gae&#x27;: None, &#x27;password&#x27;: &#x27;&#x27;, &#x27;request_queue_size&#x27;: 5, &#x27;ssl_certificate&#x27;: &#x27;&#x27;, &#x27;cronjob&#x27;: False, &#x27;numthreads&#x27;: 50, &#x27;quiet&#x27;: False, &#x27;import_models&#x27;: False, &#x27;timeout&#x27;: 10, &#x27;plain&#x27;: True, &#x27;nobanner&#x27;: False}&gt;</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">db_sessions</td><td style="vertical-align:top;">:</td><td><div>set([])</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">debugging</td><td style="vertical-align:top;">:</td><td><div>False</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">gluon_parent</td><td style="vertical-align:top;">:</td><td><div>/var/www/html/web2py</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">is_jython</td><td style="vertical-align:top;">:</td><td><div>False</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">is_pypy</td><td style="vertical-align:top;">:</td><td><div>False</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">is_source</td><td style="vertical-align:top;">:</td><td><div>True</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">local_hosts</td><td style="vertical-align:top;">:</td><td><div><table><tr><td><div>taship.iiit.ac.in</div></td></tr><tr><td><div>::1</div></td></tr><tr><td><div>::ffff:127.0.0.1</div></td></tr><tr><td><div>127.0.0.1</div></td></tr></table></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">web2py_version</td><td style="vertical-align:top;">:</td><td><div>2.9.11-stable+timestamp.2014.09.15.23.35.11</div></td></tr></table></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">is_https</td><td style="vertical-align:top;">:</td><td><div>False</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">is_local</td><td style="vertical-align:top;">:</td><td><div>False</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">is_restful</td><td style="vertical-align:top;">:</td><td><div>False</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">is_sheduler</td><td style="vertical-align:top;">:</td><td><div>None</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">is_shell</td><td style="vertical-align:top;">:</td><td><div>None</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">now</td><td style="vertical-align:top;">:</td><td><div>datetime.datetime(2015, 6, 19, 5, 48, 18, 450326)</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">raw_args</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">raw_extension</td><td style="vertical-align:top;">:</td><td><div>None</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">url</td><td style="vertical-align:top;">:</td><td><div>/taportal</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">utcnow</td><td style="vertical-align:top;">:</td><td><div>datetime.datetime(2015, 6, 19, 0, 18, 18, 450384)</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">uuid</td><td style="vertical-align:top;">:</td><td><div>taportal/10.2.16.173.2015-06-19.05-48-18.53fe4a1e-96f5-41ce-85a4-a40d07903ac4</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">wsgi</td><td style="vertical-align:top;">:</td><td><div>&lt;gluon.main.LazyWSGI object at 0x7f2ec5c0a950&gt;</div></td></tr></table></div>'
+tRp58
+sS'frames'
+p59
+(lp60
+(dp61
+S'file'
+p62
+S'/var/www/html/web2py/gluon/restricted.py'
+p63
+sS'dump'
+p64
+(dp65
+S'environment'
+p66
+S"{'A': <class 'gluon.html.A'>, 'ANY_OF': <class 'gluon.validators.ANY_OF'>, 'ASSIGNJS': <function ASSIGNJS>, 'Auth': <class 'gluon.tools.Auth'>, 'B': <class 'gluon.html.B'>, 'BEAUTIFY': <class 'gluon.html.BEAUTIFY'>, 'BODY': <class 'gluon.html.BODY'>, 'BR': <class 'gluon.html.BR'>, 'BUTTON': <class 'gluon.html.BUTTON'>, 'CAS': <Storage {'check_url': 'http://10.2.16.173/tapor...b6320>, 'my_url': 'http://10.2.16.173/taportal'}>, ...}"
+p67
+sS'ccode'
+p68
+S'<code object <module> at 0x7f2e99e8ac60, file "/...cations/taportal/controllers/default.py", line 4>'
+p69
+ssS'lnum'
+p70
+I224
+sS'lines'
+p71
+(dp72
+I224
+S'        exec ccode in environment'
+p73
+sI225
+S'    except HTTP:'
+p74
+sI226
+S'        raise'
+p75
+sI227
+S'    except RestrictedError:'
+p76
+sI228
+S'        # do not encapsulate (obfuscate) the original RestrictedError'
+p77
+sI219
+S'    try:'
+p78
+sI220
+S'        if isinstance(code, types.CodeType):'
+p79
+sI221
+S'            ccode = code'
+p80
+sI222
+S'        else:'
+p81
+sI223
+S'            ccode = compile2(code, layer)'
+p82
+ssS'call'
+p83
+S"(code='# -*- coding: utf-8 -*-\\n\\n#######################...vice()\\n\\n\\n\\nresponse._vars=response._caller(index)\\n', environment={'A': <class 'gluon.html.A'>, 'ANY_OF': <class 'gluon.validators.ANY_OF'>, 'ASSIGNJS': <function ASSIGNJS>, 'Auth': <class 'gluon.tools.Auth'>, 'B': <class 'gluon.html.B'>, 'BEAUTIFY': <class 'gluon.html.BEAUTIFY'>, 'BODY': <class 'gluon.html.BODY'>, 'BR': <class 'gluon.html.BR'>, 'BUTTON': <class 'gluon.html.BUTTON'>, 'CAS': <Storage {'check_url': 'http://10.2.16.173/tapor...b6320>, 'my_url': 'http://10.2.16.173/taportal'}>, ...}, layer='/var/www/html/web2py/applications/taportal/controllers/default.py')"
+p84
+sS'func'
+p85
+S'restricted'
+p86
+sa(dp87
+g62
+S'/var/www/html/web2py/applications/taportal/controllers/default.py'
+p88
+sg64
+(dp89
+S'send_mail'
+p90
+S'undefined'
+p91
+ssg70
+I5
+sg71
+(dp92
+I2
+S''
+sI3
+S'#########################################################################'
+p93
+sI4
+S'import ldap'
+p94
+sI5
+S'import send_mail'
+p95
+sI6
+S'import gluon'
+p96
+sI7
+S'#########################################################################'
+p97
+sI8
+S''
+sI9
+S''
+sI10
+S'#########################################################################'
+p98
+sI11
+S"CAS.login_url='https://login.iiit.ac.in/cas/login'"
+p99
+ssg83
+S'()'
+p100
+sg85
+S'<module>'
+p101
+sa(dp102
+g62
+S'/var/www/html/web2py/gluon/custom_import.py'
+p103
+sg64
+(dp104
+S'builtinstr'
+p105
+S"<type 'str'>"
+p106
+sS'builtinImportError'
+p107
+S"<type 'exceptions.ImportError'>"
+p108
+sS'e'
+S"KeyError('send_mail',)"
+p109
+ssg70
+I86
+sg71
+(dp110
+I81
+S'                        new_mod = base_importer('
+p111
+sI82
+S'                            modules_prefix, globals, locals, [itemname], level)'
+p112
+sI83
+S'                        try:'
+p113
+sI84
+S'                            result = result or new_mod.__dict__[itemname]'
+p114
+sI85
+S'                        except KeyError, e:'
+p115
+sI86
+S"                            raise ImportError, 'Cannot import module %s' % str(e)"
+p116
+sI87
+S'                        modules_prefix += "." + itemname'
+p117
+sI88
+S'                    return result'
+p118
+sI89
+S'                else:'
+p119
+sI90
+S'                    # import like "from x import a, b, ..."'
+p120
+ssg83
+S"(name='send_mail', globals={'A': <class 'gluon.html.A'>, 'ANY_OF': <class 'gluon.validators.ANY_OF'>, 'ASSIGNJS': <function ASSIGNJS>, 'Auth': <class 'gluon.tools.Auth'>, 'B': <class 'gluon.html.B'>, 'BEAUTIFY': <class 'gluon.html.BEAUTIFY'>, 'BODY': <class 'gluon.html.BODY'>, 'BR': <class 'gluon.html.BR'>, 'BUTTON': <class 'gluon.html.BUTTON'>, 'CAS': <Storage {'check_url': 'http://10.2.16.173/tapor...b6320>, 'my_url': 'http://10.2.16.173/taportal'}>, ...}, locals={'A': <class 'gluon.html.A'>, 'ANY_OF': <class 'gluon.validators.ANY_OF'>, 'ASSIGNJS': <function ASSIGNJS>, 'Auth': <class 'gluon.tools.Auth'>, 'B': <class 'gluon.html.B'>, 'BEAUTIFY': <class 'gluon.html.BEAUTIFY'>, 'BODY': <class 'gluon.html.BODY'>, 'BR': <class 'gluon.html.BR'>, 'BUTTON': <class 'gluon.html.BUTTON'>, 'CAS': <Storage {'check_url': 'http://10.2.16.173/tapor...b6320>, 'my_url': 'http://10.2.16.173/taportal'}>, ...}, fromlist=[], level=-1)"
+p121
+sg85
+S'custom_importer'
+p122
+sasS'pyver'
+p123
+S'Python 2.6.6: /usr/bin/python2.6 (prefix: /usr)'
+p124
+sS'session'
+p125
+g57
+(S's\xde\x02\x00\x00<div><table><tr><td style="font-weight:bold;vertical-align:top;">email</td><td style="vertical-align:top;">:</td><td><div>mohit.jain@research.iiit.ac.in</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">login</td><td style="vertical-align:top;">:</td><td><div>1</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">name</td><td style="vertical-align:top;">:</td><td><div>Mohit Jain</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">roll</td><td style="vertical-align:top;">:</td><td><div>201405620</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">token</td><td style="vertical-align:top;">:</td><td><div>mohit.jain@research.iiit.ac.in</div></td></tr></table></div>'
+tRp126
+sS'etype'
+p127
+S"<type 'exceptions.ImportError'>"
+p128
+sS'date'
+p129
+S'Fri Jun 19 05:48:18 2015'
+p130
+sS'response'
+p131
+g57
+(S's\xd1\x1e\x00\x00<div><table><tr><td style="font-weight:bold;vertical-align:top;">body</td><td style="vertical-align:top;">:</td><td><div>&lt;cStringIO.StringO object at 0x7f2e4a2cd228&gt;</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">cookies</td><td style="vertical-align:top;">:</td><td><div><table><tr><td style="font-weight:bold;vertical-align:top;">session_id_taportal</td><td style="vertical-align:top;">:</td><td><div>10.2.16.173-2df901fc-6a64-4ef3-811a-ff2dad38fb60<table><tr><td style="font-weight:bold;vertical-align:top;">comment</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">domain</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">expires</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">httponly</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">max-age</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">path</td><td style="vertical-align:top;">:</td><td><div>/</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">secure</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">version</td><td style="vertical-align:top;">:</td><td><div></div></td></tr></table></div></td></tr></table></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">delimiters</td><td style="vertical-align:top;">:</td><td><div><table><tr><td><div>{{</div></td></tr><tr><td><div>}}</div></td></tr></table></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">files</td><td style="vertical-align:top;">:</td><td><div><table></table></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">flash</td><td style="vertical-align:top;">:</td><td><div></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">form_label_separator</td><td style="vertical-align:top;">:</td><td><div>: </div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">formstyle</td><td style="vertical-align:top;">:</td><td><div>table3cols</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">generic_patterns</td><td style="vertical-align:top;">:</td><td><div><table></table></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">google_analytics_id</td><td style="vertical-align:top;">:</td><td><div>None</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">headers</td><td style="vertical-align:top;">:</td><td><div><table><tr><td style="font-weight:bold;vertical-align:top;">X-Powered-By</td><td style="vertical-align:top;">:</td><td><div>web2py</div></td></tr></table></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">logo</td><td style="vertical-align:top;">:</td><td><div><a class="navbar-brand" href="/taportal/default/login"><b><span>IIIT-H</span></b>&trade;&nbsp;</a></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">menu</td><td style="vertical-align:top;">:</td><td><div><table><tr><td><div><table><tr><td><div>Home</div></td></tr><tr><td><div>False</div></td></tr><tr><td><div>/taportal/overall_admin/index</div></td></tr><tr><td><div><table></table></div></td></tr></table></div></td></tr><tr><td><div><table><tr><td><div>Admins</div></td></tr><tr><td><div>False</div></td></tr><tr><td><div>/taportal/default/admin_page</div></td></tr><tr><td><div><table></table></div></td></tr></table></div></td></tr><tr><td><div><table><tr><td><div>Log Out</div></td></tr><tr><td><div>True</div></td></tr><tr><td><div>/taportal/default/logout</div></td></tr><tr><td><div><table></table></div></td></tr></table></div></td></tr></table></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">meta</td><td style="vertical-align:top;">:</td><td><div><table><tr><td style="font-weight:bold;vertical-align:top;">author</td><td style="vertical-align:top;">:</td><td><div>Mohit Jain &lt;mohit.jain@research.iiit.ac.in&gt;</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">description</td><td style="vertical-align:top;">:</td><td><div>TAship Portal for IIIT-H</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">generator</td><td style="vertical-align:top;">:</td><td><div>Web2py Web Framework</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">keywords</td><td style="vertical-align:top;">:</td><td><div>web2py, python, framework</div></td></tr></table></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">models_to_run</td><td style="vertical-align:top;">:</td><td><div><table><tr><td><div>^\\w+\\.py$</div></td></tr><tr><td><div>^default/\\w+\\.py$</div></td></tr><tr><td><div>^default/index/\\w+\\.py$</div></td></tr></table></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">postprocessing</td><td style="vertical-align:top;">:</td><td><div><table></table></div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">session_client</td><td style="vertical-align:top;">:</td><td><div>10.2.16.173</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">session_cookie_compression_level</td><td style="vertical-align:top;">:</td><td><div>None</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">session_cookie_expires</td><td style="vertical-align:top;">:</td><td><div>None</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">session_cookie_key</td><td style="vertical-align:top;">:</td><td><div>None</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">session_data_name</td><td style="vertical-align:top;">:</td><td><div>session_data_taportal</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">session_file</td><td style="vertical-align:top;">:</td><td><div>&lt;open file &#x27;/var/www/html/web2py/applications/taportal/sessions/011/117/10.2.16.173-2df901fc-6a64-4ef3-811a-ff2dad38fb60&#x27;, mode &#x27;rb+&#x27; at 0x7f2e7487b390&gt;</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">session_filename</td><td style="vertical-align:top;">:</td><td><div>/var/www/html/web2py/applications/taportal/sessions/10.2.16.173-2df901fc-6a64-4ef3-811a-ff2dad38fb60</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">session_hash</td><td style="vertical-align:top;">:</td><td><div>d6e4f560fd6736f2c6e827b0e9b98b52</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">session_id</td><td style="vertical-align:top;">:</td><td><div>10.2.16.173-2df901fc-6a64-4ef3-811a-ff2dad38fb60</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">session_id_name</td><td style="vertical-align:top;">:</td><td><div>session_id_taportal</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">session_locked</td><td style="vertical-align:top;">:</td><td><div>True</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">session_masterapp</td><td style="vertical-align:top;">:</td><td><div>taportal</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">session_new</td><td style="vertical-align:top;">:</td><td><div>False</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">session_storage_type</td><td style="vertical-align:top;">:</td><td><div>file</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">status</td><td style="vertical-align:top;">:</td><td><div>200</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">title</td><td style="vertical-align:top;">:</td><td><div>TA Portal</div></td></tr><tr><td style="font-weight:bold;vertical-align:top;">view</td><td style="vertical-align:top;">:</td><td><div>default/index.html</div></td></tr></table></div>'
+tRp132
+sS'locals'
+p133
+(dp134
+S'fromlist'
+p135
+S'[]'
+p136
+sS'e'
+S"KeyError('send_mail',)"
+p137
+sS'name'
+p138
+S"'send_mail'"
+p139
+sS'level'
+p140
+S'-1'
+p141
+sS'itemname'
+p142
+S"'send_mail'"
+p143
+sS'e3'
+p144
+S"ImportError('No module named send_mail',)"
+p145
+sS'base_importer'
+p146
+S'<built-in function __import__>'
+p147
+sS'globals'
+p148
+S"{'A': <class 'gluon.html.A'>, 'ANY_OF': <class 'gluon.validators.ANY_OF'>, 'ASSIGNJS': <function ASSIGNJS>, 'Auth': <class 'gluon.tools.Auth'>, 'B': <class 'gluon.html.B'>, 'BEAUTIFY': <class 'gluon.html.BEAUTIFY'>, 'BODY': <class 'gluon.html.BODY'>, 'BR': <class 'gluon.html.BR'>, 'BUTTON': <class 'gluon.html.BUTTON'>, 'CAS': <Storage {'check_url': 'http://10.2.16.173/tapor...b6320>, 'my_url': 'http://10.2.16.173/taportal'}>, ...}"
+p149
+sS'result'
+p150
+S'None'
+p151
+sS'items'
+p152
+S"['', 'var', 'www', 'html', 'web2py', 'applications', 'taportal']"
+p153
+sS'modules_prefix'
+p154
+S"'applications.taportal.modules'"
+p155
+sS'new_mod'
+p156
+S"<module 'applications.taportal.modules' from 'applications/taportal/modules/__init__.pyc'>"
+p157
+sS'e1'
+p158
+S'ImportError("Cannot import module \'send_mail\'",)'
+p159
+sS'import_tb'
+p160
+S'None'
+p161
+sg133
+S"{'A': <class 'gluon.html.A'>, 'ANY_OF': <class 'gluon.validators.ANY_OF'>, 'ASSIGNJS': <function ASSIGNJS>, 'Auth': <class 'gluon.tools.Auth'>, 'B': <class 'gluon.html.B'>, 'BEAUTIFY': <class 'gluon.html.BEAUTIFY'>, 'BODY': <class 'gluon.html.BODY'>, 'BR': <class 'gluon.html.BR'>, 'BUTTON': <class 'gluon.html.BUTTON'>, 'CAS': <Storage {'check_url': 'http://10.2.16.173/tapor...b6320>, 'my_url': 'http://10.2.16.173/taportal'}>, ...}"
+p162
+sS'oname'
+p163
+S"'send_mail'"
+p164
+sssS'traceback'
+p165
+S'Traceback (most recent call last):\n  File "/var/www/html/web2py/gluon/restricted.py", line 224, in restricted\n    exec ccode in environment\n  File "/var/www/html/web2py/applications/taportal/controllers/default.py", line 5, in <module>\n    import send_mail\n  File "/var/www/html/web2py/gluon/custom_import.py", line 86, in custom_importer\n    raise ImportError, \'Cannot import module %s\' % str(e)\nImportError: Cannot import module \'send_mail\'\n'
+p166
+s.

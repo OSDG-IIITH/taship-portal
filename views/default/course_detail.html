@@ -1,0 +1,30 @@
+{{extend 'layout.html'}}
+
+<div style="width:100%; float:left">
+<table border='5px' width='100%' class="table table-bordered table-hover">
+    <caption>All Courses</caption>
+    <thead>
+    <tr>
+        <th style="text-align:center;">Code</th>
+        <th style="text-align:center;">Name</th>
+        <th style="text-align:center;">Credits</th>
+        <th style="text-align:center;">Type</th>
+        <th style="text-align:center;">Instructor(s)</th>
+    <tr>
+    </thead>
+    {{for course in courseDetail:}}
+    <tr>
+        <td style="text-align:center">{{=course['c_code']}}</td>
+        <td style="text-align:center">{{=course['c_name']}}</td>
+        <td style="text-align:center">{{=course['c_credits']}}</td>
+        <td style="text-align:center">{{=course['c_type']}}</td>
+        <td style="text-align:center">
+		{{for faculty in db((db.Faculty_Course.c_id==course['id']) & (db.Faculty.id==db.Faculty_Course.fac_id)).select(db.Faculty.ALL):}}
+			{{fac_entry='| '+faculty['fac_name']+' |'}}
+			{{=fac_entry}}
+		{{pass}}
+	</td>
+    </tr>
+    {{pass}}
+</table>
+</div>

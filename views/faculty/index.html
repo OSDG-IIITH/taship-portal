@@ -1,0 +1,37 @@
+{{left_sidebar_enabled=True,right_sidebar_enabled=False,('message' in globals())}}
+{{extend 'layout.html'}}
+
+{{block header}}
+    <header class="container-fluid background">
+      <div class="jumbotron text-center">
+        {{if response.title:}}
+        <h1>{{=response.title}}
+          <small>{{=response.subtitle or ''}}</small></h1>
+        {{pass}}
+      </div>
+    </header>
+{{end}}
+
+<h3>Overview</h3>
+<br/>
+<ul style="text-align:left">
+        <li>Click on 'Applications Details' to view and act upon all the applications for TAship.</li>
+        <li>A student who has already been allocated a course is marked in <span style="color:red">RED</span>.</li>
+        <li>A student who has been nominated a TAship position is marked in <span style="color:cyan">BLUE</span>.</li>
+        <li>Click on 'Contact Admin' to view list of admins to the portal.</li>
+</ul>
+
+
+{{block left_sidebar}}
+<br/>
+<ul class="butul">
+        <li class="butli"><a href="{{=URL('faculty','application_detail')}}" class="round red">Application Details<span class="round">View and nominate applicants</span></a></li>
+        <br/>
+        <br/>
+        <li class="butli"><a href="{{=URL('default','admin_page')}}" class="round yellow">Contact Admins<span class="round">Contact the admins of this website.</span></a></li>
+</ul>
+{{end}}
+
+{{block right_sidebar}}
+<!-- Left Empty -->
+{{end}}

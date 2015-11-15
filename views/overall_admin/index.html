@@ -1,0 +1,43 @@
+{{left_sidebar_enabled,right_sidebar_enabled=True,('message' in globals())}}
+{{extend 'layout.html'}}
+
+{{block header}}
+    <header class="container-fluid background">
+      <div class="jumbotron text-center">
+        {{if response.title:}}
+        <h1>{{=response.title}}
+          <small>{{=response.subtitle or ''}}</small></h1>
+        {{pass}}
+      </div>
+    </header>
+{{end}}
+
+<h3>Overview</h3>
+<ul style="text-align:left">
+	<li>Click on 'Applications' to view and act upon all the applications for TAship.</li>
+	<li>A student who has already been allocated a course is marked in <span style="color:red">RED</span>.</li>
+	<li>A student who has been nominated a TAship position is marked in <span style="color:cyan">BLUE</span>.</li>
+	<li>Click on 'Admin Details' to view and add more admins to the portal.</li>
+	<li>Click on 'Set Deadline' to set the application period and nomination period deadline.</li>
+	<li>Click on 'Semester Details' to add a new semester or auto-update the database using a CSV.</li>
+	<li>Click on 'Faculty Details' to view or add a faculty member or allot a faculty to a course</li>
+	<li>Click on 'Course Details' to view the status of the courses in terms of TA allocation or to add a new course</li>
+</ul>
+
+{{block left_sidebar}}
+<ul class="butul">
+        <li class="butli"><a href="{{=URL('overall_admin','application_detail')}}" class="round red">Applications<span class="round">View all applications</span></a></li>
+</ul>
+<ul class="butul" style="">
+        <li class="butli"><a href="{{=URL('overall_admin','admin_detail')}}" class="round yellow">Admin Details<span class="round">Add/View an admin</span></a></li>
+        <li class="butli"><a href="{{=URL('overall_admin','set_deadline')}}" class="round yellow">Set Deadline<span class="round">Set application/nomination deadline</span></a></li>
+</ul>
+<ul class="butul" style="">
+        <li class="butli"><a href="{{=URL('overall_admin','sem_detail')}}" class="round green">Semester Details<span class="round">Add a new semester</span></a></li>
+        <li class="butli"><a href="{{=URL('overall_admin','faculty_detail')}}" class="round green">Faculty Details<span class="round">Add/View a faculty.</span></a></li>
+        <li class="butli"><a href="{{=URL('overall_admin','course_detail')}}" class="round green">Course Details<span class="round">Add new courses.</span></a></li>
+</ul>
+{{end}}
+
+
+
